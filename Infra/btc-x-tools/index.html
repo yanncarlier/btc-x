@@ -1,0 +1,300 @@
+<!doctype html>
+<html>
+<head>
+<meta charset='UTF-8'><meta name='viewport' content='width=device-width initial-scale=1'>
+<title>README</title>
+</head>
+<body><h1 id='bitcoin-tools-btcxtools'>Bitcoin Tools (btcx_tools)</h1>
+<p><strong>Disclaimer: Use at Your Own Risk</strong> This is experimental beta software and may contain bugs or exhibit unexpected behavior. It is provided &quot;as-is&quot; without any warranties. Use of this software is entirely at your own discretion and risk.</p>
+<p>A comprehensive collection of Bitcoin utilities written in Rust, including an API server and various command-line tools for Bitcoin address generation, mnemonics, wallet operations, and blockchain queries.</p>
+<h2 id='prerequisites'>Prerequisites</h2>
+<ul>
+<li>Rust Installation</li>
+
+</ul>
+<h2 id='quick-start'>Quick Start</h2>
+<h3 id='building--installation'>Building &amp; Installation</h3>
+<h4 id='one-command-build-recommended'>One-command build (recommended)</h4>
+<p>The project includes a convenient build script that compiles <strong>all</strong> tools in release mode and places the binaries in the <code>dist/</code> directory:</p>
+<pre><code class='language-shell' lang='shell'>scripts/build/build.sh --release
+</code></pre>
+<p>What it does:</p>
+<ul>
+<li>Builds all crates in release mode</li>
+<li>Copies binaries to ./dist/</li>
+<li>Strips debug symbols (if strip is available)</li>
+<li>Applies UPX compression (if upx is installed – optional)</li>
+
+</ul>
+<p>After running the script you will have:</p>
+<pre><code>dist/
+├── bitcoin_tx_api
+├── blockstream_balance_loop
+├── blockstream_tx
+├── brain_wallet
+├── broadcast_tx
+├── create_tx
+├── estimate_fee
+├── fetch_utxos
+├── generate_addresses
+├── generate_mnemonic
+├── sign_tx
+</code></pre>
+<h4 id='alternative-build-manually-individual-crates'>Alternative: Build manually (individual crates)</h4>
+<pre><code class='language-shell' lang='shell'># API server
+cd api &amp;&amp; cargo build --release
+
+# Individual tools (in order of appearance in the Tools Overview)
+cd ../scripts/generate_mnemonic     &amp;&amp; cargo build --release
+cd ../scripts/generate_addresses    &amp;&amp; cargo build --release
+cd ../scripts/brain_wallet          &amp;&amp; cargo build --release
+cd ../scripts/create_tx             &amp;&amp; cargo build --release
+cd ../scripts/sign_tx               &amp;&amp; cargo build --release
+cd ../scripts/blockstream_info      &amp;&amp; cargo build --release
+cd ../scripts/blockstream_tx        &amp;&amp; cargo build --release
+cd ../scripts/fetch_utxos           &amp;&amp; cargo build --release
+cd ../scripts/broadcast_tx          &amp;&amp; cargo build --release
+cd ../scripts/estimate_fee          &amp;&amp; cargo build --release
+</code></pre>
+<p><strong>Recommendation:</strong> Use <code>scripts/build/build.sh --release</code> — it&#39;s faster and keeps everything organized in one place.</p>
+<p>The build script supports several options:</p>
+<pre><code class='language-shell' lang='shell'># Show help and usage information
+scripts/build/build.sh --help
+
+# Build debug binaries (default)
+scripts/build/build.sh
+
+# Build release binaries (recommended for production)
+scripts/build/build.sh --release
+
+# Clean build directories and rebuild
+scripts/build/build.sh --clean --release
+</code></pre>
+<h3 id='basic-usage'>Basic Usage</h3>
+<pre><code class='language-shell' lang='shell'># Brain wallet from passphrase
+./dist/brain_wallet &quot;correct horse battery staple&quot;
+
+</code></pre>
+<pre><code class='language-shell' lang='shell'># Generate 12-word mnemonic
+./dist/generate_mnemonic wordlists/english.txt 12
+
+</code></pre>
+<pre><code class='language-shell' lang='shell'># Generate addresses from mnemonic (no passphrase)
+./dist/generate_addresses &quot;abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about&quot; &quot;m/44&#39;/0&#39;/0&#39;/0&quot; &quot;&quot;
+
+</code></pre>
+<pre><code class='language-shell' lang='shell'># Check balances of many addresses
+./dist/blockstream_balance_loop addresses.txt  
+
+# or
+./dist/blockstream_balance_loop &lt;&lt;&lt; 12cbQLTFMXRnSzktFkuoG3eHoMeFtpTu3S
+
+# or
+echo 12cbQLTFMXRnSzktFkuoG3eHoMeFtpTu3S | ./dist/blockstream_balance_loop
+
+</code></pre>
+<pre><code class='language-shell' lang='shell'># To get a transaction ID (txid) (address used to send BTC to Hal Finney)
+./dist/fetch_utxos 12cbQLTFMXRnSzktFkuoG3eHoMeFtpTu3S
+# Example output includes txid field for each UTXO:
+[
+  {
+    &quot;txid&quot;: &quot;3832f861eb0fd967fd079da2ee90e415d295dbc81bfb895b73a220aa689c89eb&quot;,
+    &quot;vout&quot;: 0,
+    &quot;status&quot;: {
+      &quot;confirmed&quot;: true,
+      &quot;block_height&quot;: 878308,
+      &quot;block_hash&quot;: &quot;00000000000000000000287f37f0ddfc5756dddd8eecd2c146d36eafc744fc15&quot;,
+      &quot;block_time&quot;: 1736310913
+    },
+    &quot;value&quot;: 1000,
+    &quot;address&quot;: null,
+    &quot;script_pubkey&quot;: null
+  }, ...
+  
+</code></pre>
+<pre><code class='language-shell' lang='shell'># Look up transaction details by txid
+./dist/blockstream_tx 3832f861eb0fd967fd079da2ee90e415d295dbc81bfb895b73a220aa689c89eb
+
+</code></pre>
+<pre><code class='language-shell' lang='shell'># Create unsigned transaction (JSON from command-line)
+./dist/create_tx  &#39;{
+  &quot;inputs&quot;: [
+    {
+      &quot;txid&quot;: &quot;3832f861eb0fd967fd079da2ee90e415d295dbc81bfb895b73a220aa689c89eb&quot;,
+      &quot;vout&quot;: 0
+    }
+  ],
+  &quot;outputs&quot;: [
+    {
+      &quot;address&quot;: &quot;1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa&quot;,
+      &quot;amount&quot;: 100
+    }
+  ]
+}&#39;
+
+# unsigned transaction output example
+0100000001eb899c68aa20a2735b89fb1bc8db95d215e490eea29d07fd67d90feb61f832380000000000ffffffff0164000000000000001976a91462e907b15cbf27d5425399ebf6f0fb50ebb88f1888ac00000000
+
+</code></pre>
+<pre><code class='language-shell' lang='shell'># Sign transaction (JSON from command-line) (WIP don&#39;t use)
+./dist/sign_tx &#39;{&quot;unsigned_tx_hex&quot;:&quot;...&quot;,&quot;inputs&quot;:[{&quot;private_key_wif&quot;:&quot;5K...&quot;,&quot;address&quot;:&quot;1A1z...&quot;}]}&#39;
+
+</code></pre>
+<pre><code class='language-shell' lang='shell'># Start the transaction builder API (WIP don&#39;t use)
+./dist/bitcoin_tx_api
+
+</code></pre>
+<p>&nbsp;</p>
+<h2 id='advanced-usage-examples'>Advanced Usage Examples</h2>
+<pre><code>./dist/generate_mnemonic wordlists/english.txt 12 \
+|xargs -I {} ./dist/generate_addresses {} &quot;m/44&#39;/0&#39;/0&#39;/0&quot; &quot;&quot;
+
+</code></pre>
+<p><strong>Generate mnemonic -&gt; save it -&gt; generate addresses -&gt; save addresses -&gt; check balances</strong></p>
+<pre><code class='language-shell' lang='shell'>./dist/generate_mnemonic ./wordlists/english.txt 12 \
+  | tee mnemonic.txt \
+  | xargs -I {} ./dist/generate_addresses &quot;{}&quot; &quot;m/44&#39;/0&#39;/0&#39;/0&quot; &quot;&quot; \
+  | grep address \
+  | cut -d &#39;:&#39; -f 2 \
+  &gt; ./addresses.txt \
+  &amp;&amp; ./dist/blockstream_balance_loop ./addresses.txt
+</code></pre>
+<p><strong>Generate mnemonic -&gt; addresses -&gt; check balances in one pipeline</strong></p>
+<pre><code class='language-shell' lang='shell'>while true; do
+    ./dist/generate_mnemonic ./wordlists/english.txt 12 \
+        | tee ./mnemonic.txt \
+        | xargs -I {} ./dist/generate_addresses &quot;{}&quot; &quot;m/44&#39;/0&#39;/0&#39;/0&quot; &quot;&quot; \
+        | grep address \
+        | cut -d &#39;:&#39; -f 2 \
+        &gt; ./addresses.txt \
+        &amp;&amp; ./dist/blockstream_balance_loop ./addresses.txt \
+        | tee /dev/tty \
+        | grep -q -v &quot;Balance: 0 satoshis&quot; \
+        &amp;&amp; break
+done
+</code></pre>
+<p><strong>Generate addresses from quotes -&gt; extract addresses -&gt; check balances</strong></p>
+<pre><code class='language-shell' lang='shell'>cat ./quotes.txt \
+    | while read -r quote; do ./dist/brain_wallet &quot;$quote&quot;; done \
+    | grep Address \
+    | cut -d &#39;:&#39; -f 2 \
+    &gt; ./addresses.txt \
+    &amp;&amp; ./dist/blockstream_balance_loop ./addresses.txt
+</code></pre>
+<p><strong>Process multiple passphrases from a file</strong></p>
+<pre><code class='language-shell' lang='shell'>while IFS= read -r line || [ -n &quot;$line&quot; ]; do \
+./dist/brain_wallet &quot;$line&quot;; done \
+&lt; ./quotes.txt \
+| grep Address \
+| cut -d &#39;:&#39; -f 2 &gt; ./addresses.txt \
+&amp;&amp; ./dist/blockstream_balance_loop ./addresses.txt
+</code></pre>
+<h2 id='tools-overview'>Tools Overview</h2>
+<p>This project contains 11 main components:</p>
+<h3 id='1-generate-mnemonic-scriptsgeneratemnemonicsrcmainrs'>1. Generate Mnemonic (scripts/generate_mnemonic/src/main.rs)</h3>
+<ul>
+<li>Generates BIP39 mnemonic phrases</li>
+<li>Supports wordlists (2048 words)</li>
+<li>Supports 12, 15, 18, 21, or 24 word mnemonics</li>
+<li>Includes checksum verification</li>
+
+</ul>
+<h3 id='2-generate-addresses-scriptsgenerateaddressessrcmainrs'>2. Generate Addresses (scripts/generate_addresses/src/main.rs)</h3>
+<ul>
+<li>Generates Bitcoin addresses from BIP39 mnemonic</li>
+<li>Supports BIP32 derivation paths</li>
+<li>Optional passphrase support</li>
+<li>Generates 10 addresses from a parent derivation path</li>
+<li>Outputs: derivation path, address, public key, private key (hex), and WIF</li>
+
+</ul>
+<h3 id='3-brain-wallet-scriptsbrainwalletsrcmainrs'>3. Brain Wallet (scripts/brain_wallet/src/main.rs)</h3>
+<ul>
+<li>Generates Bitcoin wallet from a passphrase</li>
+<li>Uses SHA-256 to derive private key from passphrase</li>
+<li>Outputs WIF private key and P2PKH Bitcoin address</li>
+<li>Supports uncompressed public keys</li>
+
+</ul>
+<h3 id='4-create-transaction-scriptscreatetxsrcmainrs'>4. Create Transaction (scripts/create_tx/src/main.rs)</h3>
+<ul>
+<li>CLI tool to create unsigned Bitcoin transactions</li>
+<li>Accepts JSON input via command-line argument or stdin</li>
+<li>Accepts inputs (txid, vout) and outputs (address, amount)</li>
+<li>Returns hex-encoded transaction</li>
+<li>Same functionality as the API server endpoint, but as a command-line tool</li>
+
+</ul>
+<h3 id='5-sign-transaction-scriptssigntxsrcmainrs'>5. Sign Transaction (scripts/sign_tx/src/main.rs)</h3>
+<ul>
+<li>CLI tool to sign unsigned Bitcoin transactions</li>
+<li>Accepts JSON input via command-line argument or stdin</li>
+<li>Takes unsigned transaction hex and private keys (WIF format) with corresponding addresses</li>
+<li>Signs all inputs using ECDSA signatures</li>
+<li>Returns hex-encoded signed transaction ready for broadcast</li>
+<li>Supports P2PKH (Pay-to-Public-Key-Hash) transactions</li>
+
+</ul>
+<h3 id='6-blockstream-balance-loop-scriptsblockstreaminfosrcmainrs'>6. Blockstream Balance Loop (scripts/blockstream_info/src/main.rs)</h3>
+<ul>
+<li>CLI tool to check Bitcoin address balances</li>
+<li>Reads addresses from a file or stdin (use <code>-</code> as filename or pipe input)</li>
+<li>Queries Blockstream API for balance info</li>
+<li>Stops when it finds a non-zero balance</li>
+<li>Supports <code>--help</code> flag for usage information</li>
+
+</ul>
+<h3 id='7-blockstream-transaction-lookup-scriptsblockstreamtxsrcmainrs'>7. Blockstream Transaction Lookup (scripts/blockstream_tx/src/main.rs)</h3>
+<ul>
+<li>CLI tool to look up Bitcoin transaction details by txid</li>
+<li>Queries Blockstream API for transaction information</li>
+<li>Displays transaction details: inputs, outputs, fees, confirmation status</li>
+<li>Outputs both human-readable format and JSON</li>
+
+</ul>
+<h3 id='8-fetch-utxos-scriptsfetchutxossrcmainrs'>8. Fetch UTXOs (scripts/fetch_utxos/src/main.rs)</h3>
+<ul>
+<li>CLI tool to fetch Unspent Transaction Outputs for a Bitcoin address</li>
+<li>Queries Blockstream API for UTXO information</li>
+<li>Outputs JSON formatted UTXO data including txid, vout, value, and confirmation status</li>
+
+</ul>
+<h3 id='9-broadcast-transaction-scriptsbroadcasttxsrcmainrs'>9. Broadcast Transaction (scripts/broadcast_tx/src/main.rs)</h3>
+<ul>
+<li>CLI tool to broadcast signed Bitcoin transactions to the network</li>
+<li>Submits transaction hex to Blockstream API</li>
+<li>Returns transaction ID (txid) upon successful broadcast</li>
+
+</ul>
+<h3 id='10-estimate-fee-scriptsestimatefeesrcmainrs'>10. Estimate Fee (scripts/estimate_fee/src/main.rs)</h3>
+<ul>
+<li>CLI tool to estimate Bitcoin transaction fees</li>
+<li>Queries fee estimation APIs for current network conditions</li>
+<li>Provides fee estimates for different confirmation targets</li>
+
+</ul>
+<h2 id='dependencies'>Dependencies</h2>
+<h3 id='key-dependencies'>Key Dependencies</h3>
+<ul>
+<li><code>secp256k1</code> - Elliptic curve cryptography for Bitcoin</li>
+<li><code>bitcoin</code> - Bitcoin library</li>
+<li><code>serde</code> &amp; <code>serde_json</code> - Serialization</li>
+<li><code>tokio</code> - Async runtime (for API server)</li>
+<li><code>actix-web</code> - Web framework (for API server)</li>
+
+</ul>
+<h3 id='development'>Development</h3>
+<ul>
+<li><strong>Dependency Management:</strong> Automated via Dependabot for Cargo packages</li>
+<li><strong>Dependencies:</strong> All Rust crates defined in respective <code>Cargo.toml</code> files</li>
+<li><strong>Language:</strong> Rust (systems programming language, memory safe)</li>
+
+</ul>
+<h2 id='probability-note'>Probability Note</h2>
+<p>This project is primarily for educational purposes. The odds of finding an address with some bitcoins in it per cycle are approximately 2.94×10⁻³¹ to 1, assuming there are about 100 million seeds in use. This probability is extremely low, reflecting the vastness of the seed space and the security of Bitcoin&#39;s design. Alternatively, as a ratio, the odds are 1 to 3.4×10³⁰.</p>
+<h2 id='license'>License</h2>
+<p>[Add your license information here]</p>
+<h2 id='contributing'>Contributing</h2>
+<p>[Add contribution guidelines here]</p>
+</body>
+</html>
